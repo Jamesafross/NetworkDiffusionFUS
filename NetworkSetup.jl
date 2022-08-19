@@ -38,8 +38,6 @@ function get_stuct_data(;n=1,ROI=140)
 
             SC = load("$STRUCTDIR/$(StructMats[n])","$(split(StructMats[n],".")[1])")
 
-            SC = log.(SC)
-            SC[SC.==-Inf] .= 0
 
             SC .= SC./maximum(SC)
 
