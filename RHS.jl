@@ -8,7 +8,7 @@ function NetworkFlow(du,u,h,p,t)
             end
         end
 
-        du[i] = (-0.2*u[i] + Pr + stim(10,30,39,i,t))
+        du[i] = -0.6 *u[i] + Pr + stim(10,10.2,39,i,t)
 
         if u[i] > 1000
             u[i] = 1000
@@ -20,7 +20,7 @@ function NetworkFlow(du,u,h,p,t)
 end
 
 function proba(W,N,u)
-    return 0.01W*u
+    return 0.03W*u
 end
 
 function stim(tstart,tend,node,i,t)
