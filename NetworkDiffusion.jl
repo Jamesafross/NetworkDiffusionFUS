@@ -6,7 +6,12 @@ include("NetworkDiffusionFunctions.jl")
 V = readdlm("$WORKDIR/Paul.5z1_ROI_size.txt")[2,4:2:end]
 c = 13
 SC,dist,lags,N = networksetup(c;digits=3,nSC=2,nFC=1,N=140,normalise=false)
-lags[lags .> 0.0] = lags[lags .> 0.0] .+ 10.
+lags[lags .> 0.0] = lags[lags .> 0.0] .+ 50.
+ROIsize1 = readdlm("$WORKDIR/Paul.5z1_ROI_size.txt")[2,4:2:end]
+const ROIsize = 1 ./(ROIsize1/(maximum(ROIsize1)))
+
+
+
 
 # load real data
 
@@ -23,53 +28,74 @@ for i = 1:N
     δ[i] = sum(SC[i,:])
 end
 
-
+function size_weighted_SC!(SC,sizes,N)
+    for i = 1:N
+        for j = 1:N
+            SC[i,j] = (sizes[i]/sizes[j])*SC[i,j]
+        end
+    end
+end
+S = SimpleWeightedGraph( 1 ./ SC)
 D = SimpleWeightedGraph(dist)
 
 
-
 sp_D = johnson_shortest_paths(D).dists
+sp_S = johnson_shortest_paths(S).dists
+size_weighted_SC!(SC,ROIsize1,N)
+SCo = make_struct_context(SC,39,dist)
 
 
 
 
-spD_lhc = sp_D[:,39]
+
+
+
+
 
 nodes = collect(1:1:140)
 
-corrs1 = zeros(140)
-corrs2 = zeros(140)
+spD_lhc = sp_D[39,:]
+spS_lhc = sp_S[39,:]
+spSD_lhc = spD_lhc.*spS_lhc
+
+SCo = make_struct_context(SC,39,dist)
+
 
 const ND = network_data(SC./maximum(SC),V,N,δ)
-for i = 1:140
 
 
 
+    h(p, t; idxs=nothing) = typeof(idxs) <: Number ? 0.0 : zeros(N)
 
 
-h(p, t; idxs=nothing) = typeof(idxs) <: Number ? 0.0 : zeros(N)
-
-
-    β = 22.0
+    β = 80.0
     α = 2.0
     th = 0.1
-    τ = 0.0003
+    τ = 0.001
 
    
     tspan = (0.,60*100)
     x0 = zeros(3N)
-    x0[N+1:2*N] .= 1
-    NS = Int(nodes[i])
+    x0[N+1:2*N] .= 1.0
+    NS = 39
+
+
+
+
     println("stim node = ", NS)
-    x0[NS] = 1
-    x0[N+NS] = 0.0
+    x0[NS] = 1.0
+    x0[N+NS] = 0.0 + (1-x0[NS])
+    x0[2N+NS] = x0[NS]
+
     sol,u = run_diffusion_SIR(β,α,th,h,τ,tspan,x0)
 
     dists_roi = zeros(length(ROIs))
+    str_roi = zeros(length(ROIs))
     simulated_start_time = zeros(length(ROIs))
     for i = 1:length(ROIs)
         try 
             dists_roi[i]=spD_lhc[ROIs[i]]
+            str_roi[i]=spSD_lhc[ROIs[i]]
             simulated_start_time[i] = findfirst(u[ROIs[i],:] .== 1)
         catch
             simulated_start_time[i]= 100000
@@ -78,11 +104,11 @@ h(p, t; idxs=nothing) = typeof(idxs) <: Number ? 0.0 : zeros(N)
     
     corr2 = corspearman(simulated_start_time,dists_roi)
     corr1 = corspearman(simulated_start_time,start_time)
+    corr3 = corspearman(simulated_start_time,str_roi)
     println("corr = ",corr1)
     println("corr with dist = ", corr2)
-    corrs1[i] = corr1
-    corrs2[i] = corr2
-end
+    println("corr with str = ", corr3)
+
 p1 = heatmap(sol[1:N,1:10:end])
 p2 = heatmap(u[1:N,1:10:end])
 p3 = heatmap(sol[1:N,1:10:end] .* u[1:N,1:10:end])

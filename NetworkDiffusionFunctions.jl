@@ -1,5 +1,5 @@
 function dNetwork(dx,x,h,p,t)
-    β,α = p
+    β,α,τ = p
     @unpack W,V,N,δ = ND
 
     for i = 1:N
@@ -10,9 +10,9 @@ function dNetwork(dx,x,h,p,t)
             d += W[i,j]*h(p,t-lags[i,j];idxs=j)
             end
         end
-        dx[i] = β*d*x[i+N] - α*x[i]
-        dx[i+N] = -β*d*x[i+N]
-        dx[i+2N] = α*x[i]
+        dx[i] = (β*d*x[i+N] - α*x[i])*τ
+        dx[i+N] = (-β*d*x[i+N])*τ
+        dx[i+2N] = (α*x[i])*τ
     end
   
 end
@@ -26,14 +26,17 @@ function s(x)
     end
 end
 
-function run_diffusion_SIR(β,α,th,tspan,x0)
-    p = β,α
+function run_diffusion_SIR(β,α,th,h,τ,tspan,x0)
+    p = β,α,τ
     alg= MethodOfSteps(BS3())
     prob = DDEProblem(dNetwork,x0,h,tspan,p)
     sol = solve(prob,alg,saveat=0.1)
 
     u = sol[1:N,:]
- 
+    
+    m = mean(sol[1:N,:])
+    st = std(sol[1:N,:])
+    #th = m +2*st
     u[u .< th] .= 0
     u[u .> th] .= 1
 
@@ -54,4 +57,18 @@ mutable struct DiffParams
     α::Real
     th::Real
     cor::Real
+end
+
+function make_struct_context(SC,k,dist)
+    N=size(dist,1)
+    SCo = zeros(N,N)
+    for i = 1:N
+        for j = 1:N
+            SCo[i,j] = (SC[k,i]*SC[k,j])/(dist[k,i]*SC[k,j] + dist[k,j]*SC[k,i])
+        end
+    end
+    SCo[isnan.(SCo)]
+    return SCo
+
+
 end

@@ -1,10 +1,10 @@
 function networksetup(c;digits=3,nSC=2,nFC=1,N=2,normalise=false)
   
-        SC,dist,FC,missingROIs= get_paul_data_all(;nSC=1,nFC=1,type="control",ROI=N)
+        SC,dist= get_paul_data_all(;nSC=1,nFC=1,type="control",ROI=N)
        
         N = size(SC,1)
         lags = dist./c
-        return SC,dist,lags,N,FC,missingROIs
+        return SC,dist,lags,N
    
     
 end
@@ -17,9 +17,9 @@ function get_paul_data_all(;nSC=1,nFC=1,type="control",ROI=140)
     
     SC = get_stuct_data(;n=nSC,ROI=ROI)
     dist = get_dist_data(;n=nSC,ROI=ROI)
-    FC,missingROIs = get_functonal_data(;n=nFC,type=type,ROI=ROI)
+
     
-    return SC,dist,FC,missingROIs
+    return SC,dist
 end
     
     

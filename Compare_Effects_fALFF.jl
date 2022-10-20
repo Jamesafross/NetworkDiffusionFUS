@@ -3,8 +3,8 @@ WORKDIR = "$(homedir())/NetworkDiffusionFUS"
 include("NetworkSetup.jl")
 include("RHS.jl")
 c=13
-u = load("SIR_thresh_sol.jld","SIR_thresh_sol")
-SC,dist,lags,N,FC,missingROIs = networksetup(c;digits=3,nSC=2,nFC=1,N=140,normalise=false)
+u = load("$WORKDIR/SIR_thresh_sol.jld","SIR_thresh_sol")
+SC,dist,lags,N= networksetup(c;digits=3,nSC=2,nFC=1,N=140,normalise=false)
 mutable struct regions
     name
     ROIs
@@ -19,7 +19,7 @@ mutable struct regions
     simulated_start_time
 end
 
-ROIsize = readdlm("Paul.5z1_ROI_size.txt")[2,4:2:end]
+ROIsize = readdlm("$WORKDIR/Paul.5z1_ROI_size.txt")[2,4:2:end]
 
 name = ["ITC", "ITC", "ITC", "PONS", "PONS", "PONS","ACC","IPL","IPL","IPL",
         "SPL","SPL","SPL","PMC","PMC","PMC","PMC"]
