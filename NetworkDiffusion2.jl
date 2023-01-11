@@ -6,7 +6,7 @@ include("NetworkDiffusionFunctions.jl")
 V = readdlm("$WORKDIR/Paul.5z1_ROI_size.txt")[2,4:2:end]
 c = 13
 SC,dist,lags,N = networksetup(c;digits=3,nSC=2,nFC=1,N=140,normalise=false)
-lags[lags .> 0.0] = lags[lags .> 0.0] .+ 10.
+lags[lags .> 0.0] = lags[lags .> 0.0] .+ 0.1
 
 # load real data
 
@@ -24,7 +24,7 @@ for i = 1:N
 end
 
 
-D = SimpleWeightedGraph(dist)
+D = SimpleWeightedGraph(lags)
 
 
 
@@ -50,13 +50,13 @@ for i = 1:140
 h(p, t; idxs=nothing) = typeof(idxs) <: Number ? 0.0 : zeros(N)
 
 
-    β = 22.0
-    α = 2.0
-    th = 0.1
-    τ = 0.0003
+    β = 10.0
+    α =1.2
+    th = 0.05
+    τ = 0.0008
 
    
-    tspan = (0.,60*100)
+    tspan = (0.,80*100)
     x0 = zeros(3N)
     x0[N+1:2*N] .= 1
     NS = Int(nodes[i])
@@ -66,16 +66,17 @@ h(p, t; idxs=nothing) = typeof(idxs) <: Number ? 0.0 : zeros(N)
     sol,u = run_diffusion_SIR(β,α,th,h,τ,tspan,x0)
 
     dists_roi = zeros(length(ROIs))
+    dists_lhc = zeros(length(ROIs))
     simulated_start_time = zeros(length(ROIs))
     for i = 1:length(ROIs)
         try 
             dists_roi[i]=spD_lhc[ROIs[i]]
+           
             simulated_start_time[i] = findfirst(u[ROIs[i],:] .== 1)
         catch
             simulated_start_time[i]= 100000
         end
     end
-    
     corr2 = corspearman(simulated_start_time,dists_roi)
     corr1 = corspearman(simulated_start_time,start_time)
     println("corr = ",corr1)
@@ -83,9 +84,6 @@ h(p, t; idxs=nothing) = typeof(idxs) <: Number ? 0.0 : zeros(N)
     corrs1[i] = corr1
     corrs2[i] = corr2
 end
-p1 = heatmap(sol[1:N,1:10:end])
-p2 = heatmap(u[1:N,1:10:end])
-p3 = heatmap(sol[1:N,1:10:end] .* u[1:N,1:10:end])
 
-plot(p1,p2,p3)
-   
+println(findfirst(x->x==maximum(corrs1),corrs1))
+scatter(corrs1,xlabel="Stimulated ROI",ylabel="correlation (spearman)",title="Diffusion model correlation with ReHo [start time]",legend=false)

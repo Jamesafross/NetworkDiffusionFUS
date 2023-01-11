@@ -6,7 +6,7 @@ include("NetworkDiffusionFunctions.jl")
 V = readdlm("$WORKDIR/Paul.5z1_ROI_size.txt")[2,4:2:end]
 c = 13
 SC,dist,lags,N = networksetup(c;digits=3,nSC=2,nFC=1,N=140,normalise=false)
-lags[lags .> 0.0] = lags[lags .> 0.0] .+ 50.
+lags[lags .> 0.0] = lags[lags .> 0.0] .+ 10.
 ROIsize1 = readdlm("$WORKDIR/Paul.5z1_ROI_size.txt")[2,4:2:end]
 const ROIsize = 1 ./(ROIsize1/(maximum(ROIsize1)))
 
@@ -28,20 +28,14 @@ for i = 1:N
     δ[i] = sum(SC[i,:])
 end
 
-function size_weighted_SC!(SC,sizes,N)
-    for i = 1:N
-        for j = 1:N
-            SC[i,j] = (sizes[i]/sizes[j])*SC[i,j]
-        end
-    end
-end
+
 S = SimpleWeightedGraph( 1 ./ SC)
 D = SimpleWeightedGraph(dist)
 
 
 sp_D = johnson_shortest_paths(D).dists
 sp_S = johnson_shortest_paths(S).dists
-size_weighted_SC!(SC,ROIsize1,N)
+#size_weighted_SC!(SC,ROIsize1,N)
 SCo = make_struct_context(SC,39,dist)
 
 
@@ -68,24 +62,42 @@ const ND = network_data(SC./maximum(SC),V,N,δ)
     h(p, t; idxs=nothing) = typeof(idxs) <: Number ? 0.0 : zeros(N)
 
 
-    β = 80.0
-    α = 2.0
-    th = 0.1
-    τ = 0.001
+    β = 10.0
+    α = 1.2
+    th = 0.05
+    τ = 0.0008
 
    
-    tspan = (0.,60*100)
+    tspan = (0.,80*100)
     x0 = zeros(3N)
     x0[N+1:2*N] .= 1.0
     NS = 39
-
-
-
 
     println("stim node = ", NS)
     x0[NS] = 1.0
     x0[N+NS] = 0.0 + (1-x0[NS])
     x0[2N+NS] = x0[NS]
+
+    x0[13] = 1.0
+    x0[N+13] = 0.0 + (1-x0[NS])
+    x0[2N+13] = x0[NS]
+
+    x0[15] = 1.0
+    x0[N+15] = 0.0 + (1-x0[NS])
+    x0[2N+15] = x0[NS]
+
+    x0[19] = 1.0
+    x0[N+19] = 0.0 + (1-x0[NS])
+    x0[2N+19] = x0[NS]
+
+    x0[36] = 1.0
+    x0[N+36] = 0.0 + (1-x0[NS])
+    x0[2N+36] = x0[NS]
+
+
+
+
+
 
     sol,u = run_diffusion_SIR(β,α,th,h,τ,tspan,x0)
 
@@ -109,9 +121,8 @@ const ND = network_data(SC./maximum(SC),V,N,δ)
     println("corr with dist = ", corr2)
     println("corr with str = ", corr3)
 
-p1 = heatmap(sol[1:N,1:10:end])
-p2 = heatmap(u[1:N,1:10:end])
-p3 = heatmap(sol[1:N,1:10:end] .* u[1:N,1:10:end])
+p1 = heatmap(sol[1:N,1:10:end],xlabel="time",ylabel="ROI")
+p2 = heatmap(u[1:N,1:10:end],xlabel="time",ylabel="ROI")
 
-plot(p1,p2,p3)
+plot(p1,p2)
    

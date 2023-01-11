@@ -1,7 +1,6 @@
 using JLD,Plots,DifferentialEquations,Parameters,Graphs,SimpleWeightedGraphs,StatsBase,DelimitedFiles,MAT
 include("NetworkDiffusionFunctions.jl")
 
-
 WORKDIR = "$(homedir())/NetworkDiffusionFUS"
 include("NetworkSetup.jl")
 include("RHS.jl")
@@ -66,12 +65,15 @@ K = [75,75,75, 36,36,36,
 
 dataAffect = Array{regions}(undef,length(name))
 
+lags = dist/13000
+
+lags[lags .> 0.0] = lags[lags .> 0.0] .+0.001
 
 BinGraph = zeros(N,N)
 BinGraph .= dist
 BinGraph[BinGraph .> 0.0 ] .= 1.
 B = SimpleWeightedGraph(BinGraph)
-V = SimpleWeightedGraph(dist ./13.)
+V = SimpleWeightedGraph(lags) 
 S = SimpleWeightedGraph( 1 ./ SC)
 D = SimpleWeightedGraph(dist)
 sd = dist ./ SC
@@ -84,36 +86,43 @@ sp_D = johnson_shortest_paths(D).dists
 sp_S = johnson_shortest_paths(S).dists
 sp_SD = johnson_shortest_paths(SD).dists
 
+corr_vec = zeros(140)
 
-delay_const = zeros(N)
-delay_const = sp_B[39,:]
-delay_const[delay_const .== 1] .= 0 
-delay_const[delay_const .== 2] .= 1
-
-
-spD_lhc = sp_D[:,39]
-spS_lhc = sp_S[:,39]
-spSD_lhc = sp_SD[:,39]
-spV_lhc = sp_V[:,39] .+ delay_const*0.5
+for ii = 1:N
+        delay_const = zeros(N)
+        delay_const = sp_B[ii,:]
+        delay_const[delay_const .== 1] .= 0 
+        delay_const[delay_const .== 2] .= 1
 
 
+        spD_lhc = sp_D[:,ii]
+        spS_lhc = sp_S[:,ii]
+        spSD_lhc = sp_SD[:,ii]
+        spV_lhc = sp_V[:,ii]
 
-for i = 1:length(name)
-    dataAffect[i] = regions(name[i],ROIs[i],ROIsize[ROIs[i]],start_time[i],end_time[i],
-    start_time[i]- end_time[i],T[i],spD_lhc[ROIs[i]],spS_lhc[ROIs[i]],spSD_lhc[ROIs[i]],spV_lhc[ROIs[i]],median_path_lengths[ROIs[i]],findfirst(u[ROIs[i],:] .== 1))
+
+
+        for i = 1:length(name)
+        dataAffect[i] = regions(name[i],ROIs[i],ROIsize[ROIs[i]],start_time[i],end_time[i],
+        start_time[i]- end_time[i],T[i],spD_lhc[ROIs[i]],spS_lhc[ROIs[i]],spSD_lhc[ROIs[i]],spV_lhc[ROIs[i]],median_path_lengths[ROIs[i]],findfirst(u[ROIs[i],:] .== 1))
+        end
+
+
+        effect = zeros(length(name))
+        dist_lhc = zeros(length(name))
+
+
+        for i = 1:length(name)
+        effect[i] = dataAffect[i].start_time
+        dist_lhc[i] = dataAffect[i].sp_from_lhc_dist
+        end
+        corr_vec[ii] = corspearman(effect,dist_lhc)
 end
 
+corr_vec_ROI = cat(corr_vec,collect(1:1:140),dims=2)
 
-effect = zeros(length(name))
-dist_lhc = zeros(length(name))
+sorted_corr_vec = corr_vec_ROI[sortperm(corr_vec_ROI[:, 1]), :]
 
+scatter(corr_vec,legend=false,xticks=collect(0:10:140),ylabel="ρ",xlabel="ROI",title="ReHo start time Correlation with distance 
+shortest path")
 
-for i = 1:length(name)
-    effect[i] = dataAffect[i].T
-    dist_lhc[i] = dataAffect[i].sp_from_lhc_struct
-end
-
-println("corr = ",corspearman(effect,dist_lhc))
-
-
-    

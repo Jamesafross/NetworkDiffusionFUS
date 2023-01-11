@@ -17,6 +17,14 @@ function dNetwork(dx,x,h,p,t)
   
 end
 
+function size_weighted_SC!(SC,sizes,N)
+    for i = 1:N
+        for j = 1:N
+            SC[i,j] = (sizes[i]/sizes[j])*SC[i,j]
+        end
+    end
+end
+
 
 function s(x)
     if x > 0.
